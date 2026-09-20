@@ -1,5 +1,75 @@
-111
-222
-333
-333
-2222
+#include <iomanip>
+#include <iostream>
+struct Bar {
+    double force_n;
+    double area_m2;
+    double young_modulus_pa;
+    double length_m;
+};
+
+double calculate_stress_pa(Bar current_bar) {
+    return current_bar.force_n / current_bar.area_m2;
+}
+
+double calculate_strain(double stress_pa, double young_modulus_pa) {
+    return stress_pa / young_modulus_pa;
+}
+
+double calculate_elongation_m(double strain, double length_m) {
+    return strain * length_m;
+}
+double calculate_elongation_from_bar_m(Bar current_bar) {
+    return current_bar.force_n * current_bar.length_m /
+           (current_bar.young_modulus_pa * current_bar.area_m2);
+}
+
+int main() {
+    Bar bar;
+
+    std::cout << "Enter tensile force in N: ";
+    std::cin >> bar.force_n;
+
+    if (!std::cin || bar.force_n < 0.0) {
+        std::cout << "Error: force must be a non-negative number.\n";
+        return 1;
+    }
+
+    std::cout << "Enter cross-sectional area in m^2: ";
+    std::cin >> bar.area_m2;
+
+    if (!std::cin || bar.area_m2 <= 0.0) {
+        std::cout << "Error: area must be a positive number.\n";
+        return 1;
+    }
+
+    std::cout << "Enter Young's modulus in Pa: ";
+    std::cin >>bar. young_modulus_pa;
+
+    if (!std::cin || bar.young_modulus_pa <= 0.0) {
+        std::cout << "Error: Young's modulus must be a positive number.\n";
+        return 1;
+    }
+
+    std::cout << "Enter bar length in m: ";
+    std::cin >> bar.length_m;
+
+    if (!std::cin || bar.length_m <= 0.0) {
+        std::cout << "Error: length must be a positive number.\n";
+        return 1;
+    }
+
+    const double stress_pa = calculate_stress_pa(bar);//这里的虚色指定义函数的形参，后面是我们传入的实参
+    const double strain = calculate_strain(stress_pa, bar.young_modulus_pa);
+    const double elongation_m = calculate_elongation_m(strain, bar.length_m);
+    const double elongation_from_bar_m =calculate_elongation_from_bar_m(bar);
+    const double stress_mpa = stress_pa / 1'000'000.0;
+    const double elongation_mm = elongation_m * 1000.0;
+
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Stress: " << stress_mpa << " MPa\n";
+    std::cout << "Strain: " << strain << "\n";
+    std::cout << "Elongation: " << elongation_m << " m\n";
+    std::cout << "Elongation: " << elongation_mm << " mm\n";
+     std::cout << "Elongation from bar: "<< elongation_from_bar_m << " m\n";
+    return 0;
+}
