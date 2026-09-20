@@ -1,10 +1,18 @@
 #include <iomanip>
 #include <iostream>
+#include <filesystem>
+#include <cmath>
+using namespace std;
 struct Bar {
-    double force_n;
-    double area_m2;
-    double young_modulus_pa;
-    double length_m;
+    double force_n = 0.0;          // 轴向拉力，N
+    double area_m2 = 0.0;          // 横截面积，m²
+    double young_modulus_pa = 0.0; // 杨氏模量，Pa
+    double length_m = 0.0;         // 原长，m
+};
+struct BarResult {
+    double stress_pa = 0.0;
+    double strain = 0.0;
+    double elongation_m = 0.0;
 };
 
 double calculate_stress_pa(Bar current_bar) {
@@ -18,58 +26,118 @@ double calculate_strain(double stress_pa, double young_modulus_pa) {
 double calculate_elongation_m(double strain, double length_m) {
     return strain * length_m;
 }
+//// 杆件轴向拉伸的直接位移公式：ΔL = F × L / (E × A)
+//
+// ΔL：伸长量，单位 m
+// F ：轴向拉力，单位 N
+// L ：原始长度，单位 m
+// E ：杨氏模量，单位 Pa = N/m²
+// A ：横截面积，单位 m²
+//
+// 适用条件：均匀直杆、线弹性材料、小变形、轴向受拉。
 double calculate_elongation_from_bar_m(Bar current_bar) {
     return current_bar.force_n * current_bar.length_m /
            (current_bar.young_modulus_pa * current_bar.area_m2);
 }
+// 分析均匀直杆的轴向拉伸。
+// 假设：线弹性、小变形、截面积和材料沿杆长不变，
+// 杆内轴力恒定，忽略自重；输入已在 main 中检查。
+BarResult analyze_bar(Bar current_bar) {
+    BarResult result;
 
+    // 平均正应力：σ = F / A
+    // F：轴向拉力，N；A：横截面积，m²
+    // σ：应力，Pa = N/m²
+    result.stress_pa = calculate_stress_pa(current_bar);
+
+    // 线弹性胡克定律：ε = σ / E
+    // σ：应力，Pa；E：杨氏模量，Pa
+    // ε：应变，无量纲，表示伸长量与原长的比值
+    result.strain =
+        calculate_strain(result.stress_pa, current_bar.young_modulus_pa);
+
+    // 均匀轴向变形：ΔL = ε × L
+    // ε：应变，无量纲；L：原长，m
+    // ΔL：伸长量，m
+    result.elongation_m =
+        calculate_elongation_m(result.strain, current_bar.length_m);
+
+    return result;
+}
+     
+double calculate_axial_stiffness(Bar current_bar) {
+    return current_bar.young_modulus_pa * current_bar.area_m2 /
+           current_bar.length_m;
+}
 int main() {
+      
     Bar bar;
 
-    std::cout << "Enter tensile force in N: ";
-    std::cin >> bar.force_n;
+    cout << "Enter tensile force in N: ";
+    cin >> bar.force_n;
 
-    if (!std::cin || bar.force_n < 0.0) {
-        std::cout << "Error: force must be a non-negative number.\n";
+    if (!cin || bar.force_n < 0.0) {
+        cout << "Error: force must be a non-negative number.\n";
         return 1;
     }
 
-    std::cout << "Enter cross-sectional area in m^2: ";
-    std::cin >> bar.area_m2;
+    cout << "Enter cross-sectional area in m^2: ";
+    cin >> bar.area_m2;
 
-    if (!std::cin || bar.area_m2 <= 0.0) {
-        std::cout << "Error: area must be a positive number.\n";
+    if (!cin || bar.area_m2 <= 0.0) {
+        cout << "Error: area must be a positive number.\n";
         return 1;
     }
 
-    std::cout << "Enter Young's modulus in Pa: ";
-    std::cin >>bar. young_modulus_pa;
+    cout << "Enter Young's modulus in Pa: ";
+    cin >>bar. young_modulus_pa;
 
-    if (!std::cin || bar.young_modulus_pa <= 0.0) {
-        std::cout << "Error: Young's modulus must be a positive number.\n";
+    if (!cin || bar.young_modulus_pa <= 0.0) {
+        cout << "Error: Young's modulus must be a positive number.\n";
         return 1;
     }
 
-    std::cout << "Enter bar length in m: ";
-    std::cin >> bar.length_m;
+    cout << "Enter bar length in m: ";
+    cin >> bar.length_m;
 
-    if (!std::cin || bar.length_m <= 0.0) {
-        std::cout << "Error: length must be a positive number.\n";
+    if (!cin || bar.length_m <= 0.0) {
+        cout << "Error: length must be a positive number.\n";
         return 1;
     }
+    // 分析 bar，并将返回的三个计算结果保存在 result 中。
+    const BarResult result = analyze_bar(bar);
 
-    const double stress_pa = calculate_stress_pa(bar);//这里的虚色指定义函数的形参，后面是我们传入的实参
+    // 计算这根杆的轴向刚度，单位 N/m。
+    const double stiffness_n_per_m = calculate_axial_stiffness(bar);
+    const double stress_pa = calculate_stress_pa(bar);//这里是我们传入的实参
     const double strain = calculate_strain(stress_pa, bar.young_modulus_pa);
     const double elongation_m = calculate_elongation_m(strain, bar.length_m);
     const double elongation_from_bar_m =calculate_elongation_from_bar_m(bar);
-    const double stress_mpa = stress_pa / 1'000'000.0;
-    const double elongation_mm = elongation_m * 1000.0;
+    // 两种等价公式得到的伸长量之差。
+    // 浮点数计算不直接用 == 比较，而是允许极小误差。
+    const double difference_m =
+    abs(elongation_m - elongation_from_bar_m);
 
-    std::cout << std::fixed << std::setprecision(6);
-    std::cout << "Stress: " << stress_mpa << " MPa\n";
-    std::cout << "Strain: " << strain << "\n";
-    std::cout << "Elongation: " << elongation_m << " m\n";
-    std::cout << "Elongation: " << elongation_mm << " mm\n";
-     std::cout << "Elongation from bar: "<< elongation_from_bar_m << " m\n";
-    return 0;
+    constexpr double tolerance_m = 1e-12;
+
+    // 检查两种等价计算方式是否一致。
+// difference_m：伸长量的绝对差，单位 m。
+// tolerance_m：允许的绝对差，单位 m。
+if (difference_m > tolerance_m) {
+    cout << scientific << setprecision(6);
+    cout << "Verification failed. Difference: "
+         << difference_m << " m\n";
+    return 1;
 }
+
+// 应力单位换算：1 MPa = 1,000,000 Pa
+    const double stress_mpa = result.stress_pa / 1'000'000.0;
+
+// 长度单位换算：1 m = 1000 mm
+    const double elongation_mm = result.elongation_m * 1000.0;
+
+    cout << fixed << setprecision(6);
+    cout << "Stress: " << stress_mpa << " MPa\n";
+    cout << "Strain: " << result.strain << "\n";
+    cout << "Elongation: " << elongation_mm << " mm\n";
+    cout << "Verification: passed\n";}
